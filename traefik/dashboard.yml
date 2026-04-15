@@ -1,0 +1,9 @@
+# Routes Traefik’s own API + dashboard on entrypoint `web` (host port 80).
+http:
+  routers:
+    traefik-dashboard:
+      rule: PathPrefix(`/api`) || PathPrefix(`/dashboard`)
+      entryPoints:
+        - web
+      service: api@internal
+      priority: 1000
