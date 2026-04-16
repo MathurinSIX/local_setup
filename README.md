@@ -6,8 +6,8 @@ Use it when you want shared infrastructure (for example Traefik in front of cont
 
 ## What is in the stack
 
-- **Traefik** — the **only** service with published host ports: HTTP **80**, HTTPS **443**, and Postgres TCP on **`POSTGRES_PORT`** (default **5432**). Routes to backends use the Docker provider and a small file provider for the dashboard.
-- **PostgreSQL** — use host **`postgres.<TRAEFIK_DOMAIN>`** and port **`POSTGRES_PORT`** (e.g. `postgres.localhost:5432`). TCP hits Traefik first, then the database container. Many databases can share that server; each app uses its own `dbname` (create with `CREATE DATABASE` or your tooling). Local clients often need `sslmode=disable` in the URL.
+- **Traefik** — published host ports: HTTP **80** and HTTPS **443**. Routes to backends use the Docker provider and a small file provider for the dashboard.
+- **PostgreSQL** — published on the host as **`localhost:POSTGRES_PORT`** (default **5432**), mapped straight to the database container (not through Traefik). From another container on **`traefik-public`**, use host **`postgres`** and port **5432**. Many apps can share that server; each uses its own `dbname` (create with `CREATE DATABASE` or your tooling). Local clients often need `sslmode=disable` in the URL.
 - **MinIO** — S3 API at **`http://minio.<TRAEFIK_DOMAIN>/`** and console at **`http://minio-console.<TRAEFIK_DOMAIN>/`** (e.g. `http://minio.localhost/` and `http://minio-console.localhost/`), both **only** via Traefik on port **80**. Use the MinIO client (`mc`) against the S3 hostname.
 
 See `docker-compose.yml` for images, ports, and `restart: on-failure` on the long-running services.
@@ -29,7 +29,7 @@ See `docker-compose.yml` for images, ports, and `restart: on-failure` on the lon
 
 3. If host ports are already taken (common: `5432`, `80`), set overrides in `.env` — see `.env.example` for `POSTGRES_PORT` and `TRAEFIK_DOMAIN`.
 
-Traefik listens on port **80** for HTTP routing (including the dashboard at `http://127.0.0.1/dashboard/` and the API under `/api/`). Example Postgres URL: `postgresql://USER:PASSWORD@postgres.localhost:5432/DBNAME?sslmode=disable` (adjust user, password, db, and port from `.env`).
+Traefik listens on port **80** for HTTP routing (including the dashboard at `http://127.0.0.1/dashboard/` and the API under `/api/`). Example Postgres URL from the host: `postgresql://USER:PASSWORD@127.0.0.1:5432/DBNAME?sslmode=disable` (adjust user, password, db, and `POSTGRES_PORT` from `.env`).
 
 ## Using with **risk-control** (or other Compose apps)
 

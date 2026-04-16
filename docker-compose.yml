@@ -1,6 +1,6 @@
 # Local stack: Traefik + PostgreSQL + MinIO
 # Long-running services use restart: on-failure so Docker restarts them after a crash (non-zero exit).
-# Only Traefik publishes host ports. Postgres: postgres.<TRAEFIK_DOMAIN>:POSTGRES_PORT (TCP via Traefik).
+# Traefik publishes HTTP/HTTPS. Postgres publishes POSTGRES_PORT on the host directly (not via Traefik).
 # MinIO: http://minio.<TRAEFIK_DOMAIN>/ and http://minio-console.<TRAEFIK_DOMAIN>/ on port 80.
 # Put secrets in .env in this directory for anything beyond local dev.
 
@@ -35,12 +35,9 @@ services:
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      # Plain TCP for PostgreSQL (use host postgres.<TRAEFIK_DOMAIN> in clients; resolves like minio.<TRAEFIK_DOMAIN>).
-      - --entrypoints.pg.address=:5432
     ports:
       - "80:80"
       - "443:443"
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/dashboard.yml:/etc/traefik/dynamic/dashboard.yml:ro
@@ -56,14 +53,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-app}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      # Postgres has no HTTP Host header; HostSNI(`*`) forwards all TCP on entrypoint `pg` to this service.
-      - traefik.tcp.routers.postgres-tcp.rule=HostSNI(`*`)
-      - traefik.tcp.routers.postgres-tcp.entrypoints=pg
-      - traefik.tcp.routers.postgres-tcp.service=postgres-svc
-      - traefik.tcp.services.postgres-svc.loadbalancer.server.port=5432
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
