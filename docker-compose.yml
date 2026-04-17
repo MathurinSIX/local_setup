@@ -4,6 +4,7 @@
 # MinIO: http://minio.<TRAEFIK_DOMAIN>/ and http://minio-console.<TRAEFIK_DOMAIN>/ on port 80.
 # Put secrets in .env in this directory for anything beyond local dev.
 
+# MinIO refuses to start if MINIO_ROOT_PASSWORD is shorter than 8 characters (see release notes / server validation).
 x-minio-root: &minio-root
   MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
   MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -90,9 +91,13 @@ services:
     labels:
       - traefik.enable=true
       # S3 API and console are only reachable via Traefik on port 80 (Host-based routing).
+      # e.g. TRAEFIK_DOMAIN=localhost → http://minio.localhost/ (S3) and http://minio-console.localhost/ (UI).
+      # With multiple services on one container, each router must name its service explicitly.
       - traefik.http.routers.minio-s3.rule=Host(`minio.${TRAEFIK_DOMAIN:-localhost}`)
       - traefik.http.routers.minio-s3.entrypoints=web
+      - traefik.http.routers.minio-s3.service=minio-s3
       - traefik.http.services.minio-s3.loadbalancer.server.port=9000
       - traefik.http.routers.minio-console.rule=Host(`minio-console.${TRAEFIK_DOMAIN:-localhost}`)
       - traefik.http.routers.minio-console.entrypoints=web
+      - traefik.http.routers.minio-console.service=minio-console
       - traefik.http.services.minio-console.loadbalancer.server.port=9001
